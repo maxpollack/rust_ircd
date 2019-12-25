@@ -4,6 +4,7 @@ use pretty_env_logger;
 use std::io;
 use std::net::TcpListener;
 use std::process;
+use std::sync::mpsc::channel;
 
 mod client;
 
@@ -32,9 +33,11 @@ fn serve(port: u32) -> io::Result<()> {
 
     debug!("Successfully bound to port {}", port);
 
-    for mut stream in listener.incoming() {
+    let (tx, rx) = channel::<client::ClientCommand>();
+
+    for stream in listener.incoming() {
         if let Ok(stream) = stream {
-            let client = client::Client::new(stream);
+            let client = client::Client::new(stream, tx.clone());
 
             if let Ok(client) = client {
                 clients.push(client);
