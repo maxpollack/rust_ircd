@@ -3,8 +3,8 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 use std::thread;
+use uuid::Uuid;
 
 mod command_parser;
 
@@ -12,14 +12,20 @@ pub use command_parser::ClientCommand;
 
 pub struct Client {
     join_handle: Option<thread::JoinHandle<()>>,
+    id: String,
 }
 
 pub enum ClientError {
     CouldNotAccept(std::io::Error),
 }
 
+pub struct ServerCommand {
+    pub command: ClientCommand,
+    pub client_id: String,
+}
+
 impl Client {
-    pub fn new(stream: TcpStream, sender: Sender<ClientCommand>) -> Result<Client, ClientError> {
+    pub fn new(stream: TcpStream, sender: Sender<ServerCommand>) -> Result<Client, ClientError> {
         let address = stream.peer_addr();
 
         let address = match address {
@@ -31,7 +37,10 @@ impl Client {
 
         debug!("Accepted new connection from {}", address.ip());
 
-        let mut client = Client { join_handle: None };
+        let mut client = Client {
+            join_handle: None,
+            id: Uuid::new_v4(),
+        };
 
         client.start(stream, address, sender);
 
@@ -42,8 +51,10 @@ impl Client {
         &mut self,
         stream: TcpStream,
         address: std::net::SocketAddr,
-        sender: Sender<ClientCommand>,
+        sender: Sender<ServerCommand>,
     ) {
+        let client_id = self.id.clone();
+
         let join_handle = thread::spawn(move || {
             let mut reader = BufReader::new(stream);
             loop {
@@ -59,6 +70,10 @@ impl Client {
                         debug!("{} sent text {}", address, command.trim());
 
                         let command = ClientCommand::parse(&command);
+                        let command = ServerCommand {
+                            command,
+                            client_id: client_id.clone(),
+                        };
 
                         sender.send(command).unwrap();
                     }
