@@ -7,11 +7,12 @@ use std::process;
 use std::sync::mpsc::channel;
 
 mod client;
+mod server;
 
 pub fn run(config: ArgMatches) {
     pretty_env_logger::init();
 
-    debug!("Initializing rust_irc...");
+    info!("Initializing rust_irc...");
 
     let port = value_t!(config.value_of("port"), u32);
     let port = port.unwrap_or_else(|_| {
@@ -25,22 +26,23 @@ pub fn run(config: ArgMatches) {
 }
 
 fn serve(port: u32) -> io::Result<()> {
-    debug!("Binding to port {}", port);
+    info!("Binding to port {}", port);
 
     let bind_address = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(bind_address)?;
-    let mut clients: Vec<client::Client> = Vec::new();
 
-    debug!("Successfully bound to port {}", port);
+    info!("Successfully bound to port {}", port);
 
-    let (tx, rx) = channel::<client::ClientCommand>();
+    let (tx, rx) = channel::<server::ServerCommand>();
+
+    let server = server::ServerThread::new(rx);
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
             let client = client::Client::new(stream, tx.clone());
 
             if let Ok(client) = client {
-                clients.push(client);
+                server.join_client(client);
             } else {
                 error!("Failed to initialize client for incoming connection.");
             }
