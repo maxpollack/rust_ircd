@@ -2,10 +2,10 @@ use crate::client::Client;
 use crate::server::{Server, ServerCommand};
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
-use std::thread;
+use std::thread::{self, JoinHandle};
 
 pub struct ServerThread {
-    join_handle: Option<thread::JoinHandle<()>>,
+    join_handle: Option<JoinHandle<()>>,
     server: Arc<Server>,
 }
 
