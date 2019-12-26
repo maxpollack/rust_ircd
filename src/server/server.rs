@@ -48,10 +48,13 @@ impl Server {
 
     pub fn add_client(&self, client: Client) {
         self.with_write_clients(|clients| {
+            let client_id = &client.id.clone();
+
             clients.insert(client.id.clone(), RwLock::new(client));
 
             info!(
-                "Client joined to server. Now {} clients connected.",
+                "Client {} joined to server. Now {} clients connected.",
+                client_id,
                 clients.len()
             );
         });
