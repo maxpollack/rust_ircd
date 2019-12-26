@@ -35,7 +35,7 @@ fn serve(port: u32) -> io::Result<()> {
 
     let (tx, rx) = channel::<server::ServerCommand>();
 
-    let server = server::ServerThread::new(rx);
+    let server = server::Server::new(rx);
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
