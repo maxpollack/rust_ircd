@@ -13,7 +13,7 @@ impl ServerThread {
     pub fn new(receiver: Receiver<ServerCommand>, server: Server) -> ServerThread {
         let server = Arc::new(server);
 
-        let thread_server_context = server.clone();
+        let thread_server_reference = server.clone();
         let mut server = ServerThread {
             join_handle: None,
             server,
@@ -21,7 +21,7 @@ impl ServerThread {
 
         server.join_handle = Some(thread::spawn(move || {
             for command in receiver {
-                thread_server_context.handle_client_command(command);
+                thread_server_reference.handle_client_command(command);
             }
         }));
 
