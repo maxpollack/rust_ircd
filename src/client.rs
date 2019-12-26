@@ -49,6 +49,8 @@ impl Client {
     ) {
         let client_id = self.id.clone();
 
+        self.send_message();
+
         let join_handle = thread::spawn(move || {
             let mut reader = BufReader::new(stream);
             loop {
@@ -107,5 +109,12 @@ impl Client {
                 Err(())
             }
         }
+    }
+
+    fn send_message(&mut self) {
+        self.writer
+            .write(":horse.horse.horse: 001 whiskey \"Welcome!\"\r\n".as_bytes());
+
+        self.writer.flush();
     }
 }
