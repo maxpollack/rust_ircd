@@ -1,7 +1,7 @@
 use crate::server::ServerMessage;
 use log::*;
 use std::io::prelude::*;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter};
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
 use std::thread;
@@ -15,16 +15,19 @@ pub struct Client {
     join_handle: Option<thread::JoinHandle<()>>,
     pub id: String,
     nick: Option<String>,
+    writer: BufWriter<TcpStream>,
 }
 
 impl Client {
     pub fn new(stream: TcpStream, sender: Sender<ServerMessage>) -> Result<Client, std::io::Error> {
         let address = stream.peer_addr()?;
+        let writer = BufWriter::new(stream.try_clone()?);
 
         let mut client = Client {
             join_handle: None,
             id: Uuid::new_v4().to_hyphenated().to_string(),
             nick: None,
+            writer,
         };
 
         info!(
