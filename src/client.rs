@@ -49,8 +49,6 @@ impl Client {
     ) {
         let client_id = self.id.clone();
 
-        self.send_message();
-
         let join_handle = thread::spawn(move || {
             let mut reader = BufReader::new(stream);
             loop {
@@ -111,10 +109,28 @@ impl Client {
         }
     }
 
-    fn send_message(&mut self) {
-        self.writer
-            .write(":horse.horse.horse: 001 whiskey \"Welcome!\"\r\n".as_bytes());
+    pub fn send_numeric_reply(&mut self, reply_number: &str, reply_arguments: &str) {
+        debug!("--> {}", reply_arguments);
 
-        self.writer.flush();
+        let reply = format!(
+            ":{} {} {} {}\r\n",
+            "rust_ircd.horse",
+            reply_number,
+            self.nick.as_ref().unwrap(),
+            reply_arguments,
+        );
+
+        if let Err(error) = self.send_to_client(&reply) {
+            error!("Failed to write to client {}: {}", self.id, error);
+        }
+    }
+
+    pub fn send_to_client(&mut self, message: &str) -> Result<(), std::io::Error> {
+        debug!("-> {}", message);
+
+        self.writer.write(format!("{}\r\n", message).as_bytes())?;
+        self.writer.flush()?;
+
+        Ok(())
     }
 }

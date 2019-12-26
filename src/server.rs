@@ -1,6 +1,7 @@
 mod server_thread;
 
 use crate::client::{Client, Message};
+use crate::protocol::numeric_responses;
 use log::*;
 use server_thread::ServerThread;
 use std::collections::HashMap;
@@ -27,7 +28,7 @@ impl Server {
     }
     pub fn handle_client_command(&self, command: ServerMessage) {
         match command.command {
-            Message::Nick { name } => self.nick(&command.client_id, name),
+            Message::Nick { new_nick } => self.nick(&command.client_id, new_nick),
             Message::Disconnect => self.remove_client(&command.client_id),
             _ => (),
         }
@@ -45,9 +46,11 @@ impl Server {
         });
     }
 
-    fn nick(&self, client_id: &str, name: String) {
+    fn nick(&self, client_id: &str, nick: String) {
         self.with_write_client(client_id, |client| {
-            client.set_nick(name);
+            let welcome_message = format!("Welcome to rust_ircd, {}", &nick);
+            client.set_nick(nick);
+            client.send_numeric_reply(&numeric_responses::RPL_WELCOME, &welcome_message);
         });
     }
 
