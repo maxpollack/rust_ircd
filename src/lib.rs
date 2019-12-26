@@ -1,13 +1,14 @@
+mod client;
+mod server;
+
 use clap::{value_t, ArgMatches};
 use log::*;
 use pretty_env_logger;
+use server::ServerMessage;
 use std::io;
 use std::net::TcpListener;
 use std::process;
 use std::sync::mpsc::channel;
-
-mod client;
-mod server;
 
 pub fn run(config: ArgMatches) {
     pretty_env_logger::init();
@@ -33,7 +34,7 @@ fn serve(port: u32) -> io::Result<()> {
 
     info!("Successfully bound to port {}", port);
 
-    let (tx, rx) = channel::<server::ServerCommand>();
+    let (tx, rx) = channel::<ServerMessage>();
 
     let server = server::Server::new(rx);
 

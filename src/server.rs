@@ -1,14 +1,14 @@
 mod server_thread;
 
-use crate::client::{Client, ClientCommand};
+use crate::client::{Client, Message};
 use log::*;
 use server_thread::ServerThread;
 use std::collections::HashMap;
 use std::sync::mpsc::Receiver;
 use std::sync::RwLock;
 
-pub struct ServerCommand {
-    pub command: ClientCommand,
+pub struct ServerMessage {
+    pub command: Message,
     pub client_id: String,
 }
 
@@ -19,16 +19,16 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(receiver: Receiver<ServerCommand>) -> ServerThread {
+    pub fn new(receiver: Receiver<ServerMessage>) -> ServerThread {
         let server = Server {
             clients: RwLock::new(ClientList::new()),
         };
         ServerThread::new(receiver, server)
     }
-    pub fn handle_client_command(&self, command: ServerCommand) {
+    pub fn handle_client_command(&self, command: ServerMessage) {
         match command.command {
-            ClientCommand::Nick { name } => self.handle_nick_change(&command.client_id, name),
-            ClientCommand::Disconnect => self.remove_client(&command.client_id),
+            Message::Nick { name } => self.nick(&command.client_id, name),
+            Message::Disconnect => self.remove_client(&command.client_id),
             _ => (),
         }
     }
@@ -45,9 +45,9 @@ impl Server {
         });
     }
 
-    pub fn handle_nick_change(&self, client_id: &str, name: String) {
+    fn nick(&self, client_id: &str, name: String) {
         self.with_write_client(client_id, |client| {
-            client.set_name(name);
+            client.set_nick(name);
         });
     }
 

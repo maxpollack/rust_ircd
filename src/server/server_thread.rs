@@ -1,5 +1,5 @@
 use crate::client::Client;
-use crate::server::{Server, ServerCommand};
+use crate::server::{Server, ServerMessage};
 use std::sync::mpsc::Receiver;
 use std::sync::Arc;
 use std::thread::{self, JoinHandle};
@@ -10,7 +10,7 @@ pub struct ServerThread {
 }
 
 impl ServerThread {
-    pub fn new(receiver: Receiver<ServerCommand>, server: Server) -> ServerThread {
+    pub fn new(receiver: Receiver<ServerMessage>, server: Server) -> ServerThread {
         let server = Arc::new(server);
 
         let thread_server_reference = server.clone();

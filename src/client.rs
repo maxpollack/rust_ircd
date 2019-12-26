@@ -1,4 +1,4 @@
-use crate::server::ServerCommand;
+use crate::server::ServerMessage;
 use log::*;
 use std::io::prelude::*;
 use std::io::BufReader;
@@ -9,22 +9,22 @@ use uuid::Uuid;
 
 mod command_parser;
 
-pub use command_parser::ClientCommand;
+pub use command_parser::Message;
 
 pub struct Client {
     join_handle: Option<thread::JoinHandle<()>>,
     pub id: String,
-    name: Option<String>,
+    nick: Option<String>,
 }
 
 impl Client {
-    pub fn new(stream: TcpStream, sender: Sender<ServerCommand>) -> Result<Client, std::io::Error> {
+    pub fn new(stream: TcpStream, sender: Sender<ServerMessage>) -> Result<Client, std::io::Error> {
         let address = stream.peer_addr()?;
 
         let mut client = Client {
             join_handle: None,
             id: Uuid::new_v4().to_hyphenated().to_string(),
-            name: None,
+            nick: None,
         };
 
         info!(
@@ -42,7 +42,7 @@ impl Client {
         &mut self,
         stream: TcpStream,
         address: std::net::SocketAddr,
-        sender: Sender<ServerCommand>,
+        sender: Sender<ServerMessage>,
     ) {
         let client_id = self.id.clone();
 
@@ -56,8 +56,8 @@ impl Client {
                             address.ip()
                         );
 
-                        let disconnect_command = ServerCommand {
-                            command: ClientCommand::Disconnect,
+                        let disconnect_command = ServerMessage {
+                            command: Message::Disconnect,
                             client_id: client_id.clone(),
                         };
 
@@ -66,8 +66,8 @@ impl Client {
                         break;
                     }
                     Ok(command) => {
-                        let command = ServerCommand {
-                            command: ClientCommand::parse(&command),
+                        let command = ServerMessage {
+                            command: Message::parse(&command),
                             client_id: client_id.clone(),
                         };
 
@@ -80,10 +80,10 @@ impl Client {
         self.join_handle = Some(join_handle);
     }
 
-    pub fn set_name(&mut self, name: String) {
+    pub fn set_nick(&mut self, name: String) {
         info!("Client with ID {} set nick to {}", self.id, name);
 
-        self.name = Some(name);
+        self.nick = Some(name);
     }
 
     fn command_from_reader(reader: &mut BufReader<TcpStream>) -> Result<String, ()> {
