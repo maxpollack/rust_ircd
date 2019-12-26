@@ -17,7 +17,7 @@ pub struct Server {
 impl Server {
     pub fn new() -> Server {
         Server {
-            clients: RwLock::new(HashMap::new()),
+            clients: RwLock::new(ClientList::new()),
         }
     }
     pub fn handle_client_command(&self, command: ServerCommand) {
