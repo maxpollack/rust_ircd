@@ -12,7 +12,7 @@ mod server;
 pub fn run(config: ArgMatches) {
     pretty_env_logger::init();
 
-    debug!("Initializing rust_irc...");
+    info!("Initializing rust_irc...");
 
     let port = value_t!(config.value_of("port"), u32);
     let port = port.unwrap_or_else(|_| {
@@ -26,16 +26,16 @@ pub fn run(config: ArgMatches) {
 }
 
 fn serve(port: u32) -> io::Result<()> {
-    debug!("Binding to port {}", port);
+    info!("Binding to port {}", port);
 
     let bind_address = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(bind_address)?;
 
-    debug!("Successfully bound to port {}", port);
+    info!("Successfully bound to port {}", port);
 
-    let (tx, rx) = channel::<client::ServerCommand>();
+    let (tx, rx) = channel::<server::ServerCommand>();
 
-    let server = server::Server::new(rx);
+    let server = server::ServerThread::new(rx);
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
