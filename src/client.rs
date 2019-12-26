@@ -11,11 +11,6 @@ mod command_parser;
 
 pub use command_parser::ClientCommand;
 
-enum CommandResult {
-    Received(String),
-    Disconnected,
-}
-
 pub struct Client {
     join_handle: Option<thread::JoinHandle<()>>,
     pub id: String,
@@ -55,7 +50,7 @@ impl Client {
             let mut reader = BufReader::new(stream);
             loop {
                 match Client::command_from_reader(&mut reader) {
-                    CommandResult::Disconnected => {
+                    Err(_) => {
                         info!(
                             "Socket disconnect detected from {}, killing thread.",
                             address.ip()
@@ -70,7 +65,7 @@ impl Client {
 
                         break;
                     }
-                    CommandResult::Received(command) => {
+                    Ok(command) => {
                         let command = ServerCommand {
                             command: ClientCommand::parse(&command),
                             client_id: client_id.clone(),
@@ -91,7 +86,7 @@ impl Client {
         self.name = Some(name);
     }
 
-    fn command_from_reader(reader: &mut BufReader<TcpStream>) -> CommandResult {
+    fn command_from_reader(reader: &mut BufReader<TcpStream>) -> Result<String, ()> {
         let mut command = String::new();
         let read_result = reader.read_line(&mut command);
 
@@ -99,14 +94,14 @@ impl Client {
             Ok(length) => {
                 // 0 length read means a dead socket.
                 if length == 0 {
-                    return CommandResult::Disconnected;
+                    return Err(());
                 }
 
-                CommandResult::Received(command)
+                Ok(command)
             }
             Err(e) => {
                 error!("Error on read! {}", e);
-                CommandResult::Disconnected
+                Err(())
             }
         }
     }
