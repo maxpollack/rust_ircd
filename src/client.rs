@@ -3,15 +3,22 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::net::TcpStream;
 use std::sync::mpsc::Sender;
-use std::sync::Arc;
 use std::thread;
+use uuid::Uuid;
 
 mod command_parser;
 
 pub use command_parser::ClientCommand;
 
+pub struct ServerCommand {
+    pub command: ClientCommand,
+    pub client_id: String,
+}
+
 pub struct Client {
     join_handle: Option<thread::JoinHandle<()>>,
+    pub id: String,
+    name: Option<String>,
 }
 
 pub enum ClientError {
@@ -19,7 +26,7 @@ pub enum ClientError {
 }
 
 impl Client {
-    pub fn new(stream: TcpStream, sender: Sender<ClientCommand>) -> Result<Client, ClientError> {
+    pub fn new(stream: TcpStream, sender: Sender<ServerCommand>) -> Result<Client, ClientError> {
         let address = stream.peer_addr();
 
         let address = match address {
@@ -29,9 +36,17 @@ impl Client {
             }
         };
 
-        debug!("Accepted new connection from {}", address.ip());
+        let mut client = Client {
+            join_handle: None,
+            id: Uuid::new_v4().to_hyphenated().to_string(),
+            name: None,
+        };
 
-        let mut client = Client { join_handle: None };
+        debug!(
+            "Accepted new connection from {}, client id {}",
+            address.ip(),
+            client.id
+        );
 
         client.start(stream, address, sender);
 
@@ -42,8 +57,10 @@ impl Client {
         &mut self,
         stream: TcpStream,
         address: std::net::SocketAddr,
-        sender: Sender<ClientCommand>,
+        sender: Sender<ServerCommand>,
     ) {
+        let client_id = self.id.clone();
+
         let join_handle = thread::spawn(move || {
             let mut reader = BufReader::new(stream);
             loop {
@@ -58,7 +75,10 @@ impl Client {
                     CommandResult::Received(command) => {
                         debug!("{} sent text {}", address, command.trim());
 
-                        let command = ClientCommand::parse(&command);
+                        let command = ServerCommand {
+                            command: ClientCommand::parse(&command),
+                            client_id: client_id.clone(),
+                        };
 
                         sender.send(command).unwrap();
                     }
@@ -67,6 +87,12 @@ impl Client {
         });
 
         self.join_handle = Some(join_handle);
+    }
+
+    pub fn set_name(&mut self, name: String) {
+        debug!("Client with ID {} set nick to {}", self.id, name);
+
+        self.name = Some(name);
     }
 }
 

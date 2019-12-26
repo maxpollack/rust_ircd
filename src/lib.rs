@@ -7,6 +7,7 @@ use std::process;
 use std::sync::mpsc::channel;
 
 mod client;
+mod server;
 
 pub fn run(config: ArgMatches) {
     pretty_env_logger::init();
@@ -29,18 +30,19 @@ fn serve(port: u32) -> io::Result<()> {
 
     let bind_address = format!("127.0.0.1:{}", port);
     let listener = TcpListener::bind(bind_address)?;
-    let mut clients: Vec<client::Client> = Vec::new();
 
     debug!("Successfully bound to port {}", port);
 
-    let (tx, rx) = channel::<client::ClientCommand>();
+    let (tx, rx) = channel::<client::ServerCommand>();
+
+    let server = server::Server::new(rx);
 
     for stream in listener.incoming() {
         if let Ok(stream) = stream {
             let client = client::Client::new(stream, tx.clone());
 
             if let Ok(client) = client {
-                clients.push(client);
+                server.join_client(client);
             } else {
                 error!("Failed to initialize client for incoming connection.");
             }
